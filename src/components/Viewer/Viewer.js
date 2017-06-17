@@ -8,9 +8,6 @@ import OBJLoader from "../../loaders/OBJLoader";
 import MeshUpload from "../MeshUpload/MeshUpload";
 import CameraControls from "../CameraControls/CameraControls";
 
-const WIDTH = 1024;
-const HEIGHT = 768;
-
 const promisifyLoad = (loader) => {
   function onProgress(xhr) {
     console.log((xhr.loaded / xhr.total * 100) + '% loaded');
@@ -23,13 +20,15 @@ const promisifyLoad = (loader) => {
 
 class Viewer extends Component {
   init = () => {
+    const { width, height} = this.getRendererSize();
+
     this.scene = new THREE.Scene();
 
-    this.camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.001, 1000);
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.001, 1000);
     this.camera.position.z = 2.;
 
     this.renderer = new THREE.WebGLRenderer();
-    this.renderer.setSize(WIDTH, HEIGHT);
+    this.renderer.setSize(width, height);
 
     this.ambientLight = new THREE.AmbientLight(0x404040);
     this.scene.add(this.ambientLight);
@@ -39,6 +38,8 @@ class Viewer extends Component {
     this.scene.add(this.pointLight);
 
     this.root.appendChild(this.renderer.domElement);
+
+    window.addEventListener('resize', this.handleResize);
   };
 
   animate = () => {
@@ -47,6 +48,14 @@ class Viewer extends Component {
     this.mesh.rotation.y += 0.02;
 
     this.renderer.render(this.scene, this.camera);
+  };
+
+  handleResize = () => {
+    const { width, height} = this.getRendererSize();
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+
+    this.renderer.setSize(width, height);
   };
 
   loadMaterial(materialUri, textures) {
@@ -64,6 +73,14 @@ class Viewer extends Component {
         materials.preload();
         return materials;
       });
+  }
+
+  getRendererSize() {
+    const p = 0.9;
+    const width = window.innerWidth * p;
+    const height = window.innerHeight * p;
+
+    return {width, height};
   }
 
   loadObject(objectUri, materials) {

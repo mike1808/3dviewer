@@ -119,12 +119,16 @@ class MeshUpload extends Component {
   };
 
   handleChange = (event) => {
-    const file = event.target.files[0];
-    const ext = file.name.slice(-3).toLowerCase();
-
     this.setState({
       error: ''
     });
+
+    const file = event.target.files[0];
+    if (!file) {
+      return;
+    }
+
+    const ext = file.name.slice(-3).toLowerCase();
 
     if (ext === 'zip') {
       return this.unzipBlob(file)

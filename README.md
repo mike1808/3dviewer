@@ -9,3 +9,8 @@ Simple React and Three.js based 3D Viewer:
 - Make lightning dependant on the mesh bounding box size
 - Add 3D controls
 - Clean up code
+
+# Screenshots
+![screen2](github/screen2.gif)
+
+![screen1](github/screen1.png)
