@@ -1,4 +1,4 @@
-import React, {PureComponent} from 'react';
+import React, {Component} from 'react';
 import PropTypes from 'prop-types';
 import CircularProgress from 'material-ui/CircularProgress';
 import LinearProgress from 'material-ui/LinearProgress';
@@ -6,19 +6,16 @@ import {List, ListItem} from 'material-ui/List';
 
 import styles from './FilesList.css';
 
-const calcTotalProgress = (progress, filesCount) => {
-  return progress.reduce((total, p) => total + p, 0) / filesCount;
-};
 
-class FileItem extends PureComponent {
+class FileItem extends Component {
   render() {
-    const {fileName, type, progress} = this.props;
+    const {fileName, type, progressRef} = this.props;
     return (
       <ListItem
         primaryText={fileName}
         secondaryText={type}
         rightIcon={(
-          <CircularProgress mode="determinate" value={progress}/>
+          <CircularProgress mode="determinate" value={0} ref={progressRef}/>
         )}
       />
     );
@@ -31,16 +28,18 @@ FileItem.propTypes = {
   progress: PropTypes.number.isRequired,
 };
 
-class FilesList extends PureComponent {
+class FilesList extends Component {
   render() {
-    const {files, progress, filesCount, types} = this.props;
+    const {files, types, progressRef, totalProgressRef} = this.props;
 
     return (
       <div className="FilesList">
-        <LinearProgress mode="determinate" value={calcTotalProgress(progress, filesCount)} style={{width: '50%'}}/>
-        <List>
+        <LinearProgress mode="determinate" value={0} style={{width: '50%'}} ref={totalProgressRef}/>
+        <List style={{display: 'flex'}}>
           {files.map((file, i) => (
-            <FileItem key={file} fileName={file} type={types[i]} progress={progress[i]}/>
+            <FileItem key={file} fileName={file} type={types[i]} progressRef={(progressEl) => {
+              progressRef(progressEl, i);
+            }}/>
           ))}
         </List>
       </div>
@@ -51,8 +50,8 @@ class FilesList extends PureComponent {
 FilesList.propTypes = {
   files: PropTypes.arrayOf(PropTypes.string).isRequired,
   types: PropTypes.arrayOf(PropTypes.string).isRequired,
-  progress: PropTypes.arrayOf(PropTypes.number).isRequired,
-  filesCount: PropTypes.number,
+  progressRef: PropTypes.func.isRequired,
+  totalProgressRef: PropTypes.func.isRequired,
 };
 
 export default FilesList;

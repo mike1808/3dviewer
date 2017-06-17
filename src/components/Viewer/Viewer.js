@@ -2,8 +2,8 @@ import React, {Component} from "react";
 import Divider from "material-ui/Divider";
 
 import * as THREE from "three";
-import MTLLoader from "../../loaders/MTLLoader";
-import OBJLoader from "../../loaders/OBJLoader";
+import MTLLoader from "../../three/MTLLoader";
+import OBJLoader from "../../three/OBJLoader";
 
 import MeshUpload from "../MeshUpload/MeshUpload";
 import CameraControls from "../CameraControls/CameraControls";
@@ -19,13 +19,30 @@ const promisifyLoad = (loader) => {
 };
 
 class Viewer extends Component {
+  state = {
+    minZ: 0,
+    maxZ: 10,
+    cameraPosition: new THREE.Vector3(0, 0, 2),
+  };
+
+  componentDidMount() {
+    this.init();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    const {cameraPosition} = nextState;
+    console.log(cameraPosition);
+    this.camera.position.copy(cameraPosition);
+    this.pointLight.position.copy(cameraPosition);
+  }
+
   init = () => {
-    const { width, height} = this.getRendererSize();
+    const {width, height} = this.getRendererSize();
 
     this.scene = new THREE.Scene();
 
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.001, 1000);
-    this.camera.position.z = 2.;
+    this.camera.position.copy(this.state.cameraPosition);
 
     this.renderer = new THREE.WebGLRenderer();
     this.renderer.setSize(width, height);
@@ -33,7 +50,7 @@ class Viewer extends Component {
     this.ambientLight = new THREE.AmbientLight(0x404040);
     this.scene.add(this.ambientLight);
 
-    this.pointLight = new THREE.PointLight(0xffffff, 1.); // this should dependant on the mesh size
+    this.pointLight = new THREE.PointLight(0xffffff, 0.8); // this should dependant on the mesh size
     this.pointLight.position.set(0, 0, 0);
     this.scene.add(this.pointLight);
 
@@ -42,16 +59,20 @@ class Viewer extends Component {
     window.addEventListener('resize', this.handleResize);
   };
 
-  animate = () => {
-    requestAnimationFrame(this.animate);
-
-    this.mesh.rotation.y += 0.02;
-
+  renderScene = () => {
     this.renderer.render(this.scene, this.camera);
   };
 
+  animate = () => {
+    requestAnimationFrame(this.animate);
+
+    this.object.rotation.y += 0.01;
+
+    this.renderScene();
+  };
+
   handleResize = () => {
-    const { width, height} = this.getRendererSize();
+    const {width, height} = this.getRendererSize();
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
 
@@ -66,7 +87,7 @@ class Viewer extends Component {
       texturePathMap[texture.name] = texture.uri;
     });
 
-    mtlLoader.setMaterialOptions({texturePathMap});
+    mtlLoader.setMaterialOptions({texturePathMap, side: THREE.DoubleSide});
 
     return promisifyLoad(mtlLoader)(materialUri)
       .then((materials) => {
@@ -91,14 +112,26 @@ class Viewer extends Component {
   }
 
   addObject = (object) => {
-    const mesh = object;
-    this.mesh = mesh;
-    this.camera.lookAt(this.mesh.position);
+    if (this.object) {
+      this.scene.remove(this.object);
+    }
 
-    this.camera.position.z = this.calculateCamPos(mesh);
-    this.scene.add(this.mesh);
+    const mesh = object.children[0];
+    mesh.material.side = THREE.DoubleSide;
 
-    this.pointLight.position.z = this.calculateCamPos(mesh);
+    this.object = object;
+    this.scene.add(this.object);
+
+    const {position, up, maxZ, minZ} = this.calculateCameraPosition(this.object);
+    this.pointLight.up.copy(up);
+    this.camera.up.copy(up);
+
+    this.setState({
+      cameraPosition: position,
+      minZ,
+      maxZ,
+    });
+
   };
 
   load = ({objectUri, materialUri, textures}) => {
@@ -112,8 +145,8 @@ class Viewer extends Component {
       .then(this.addObject);
   };
 
-  handleCameraPositionChange = (x, y, z) => {
-    this.camera.position.set(x, y, z);
+  handleCameraZChange = (z) => {
+    this.setState(state => ({cameraPosition: new THREE.Vector3(state.cameraPosition.x, state.cameraPosition.y, z)}));
   };
 
   /**
@@ -121,11 +154,32 @@ class Viewer extends Component {
    * @param mesh
    * @returns {*}
    */
-  calculateCamPos = (mesh) => {
+  calculateCameraPosition = (mesh) => {
     const box = new THREE.Box3().setFromObject(mesh);
     const height = box.getSize().y;
+    const centroid = this.calculateMeshCentroid(mesh);
 
-    return height + height / (2 * Math.tan(this.camera.fov * (Math.PI / 360)))
+    const position = new THREE.Vector3().copy(centroid);
+
+    const zValue = height + height / (2 * Math.tan(this.camera.fov * (Math.PI / 360)))
+    position.z = zValue;
+
+    const v1 = centroid.clone().sub(position).normalize();
+    const v2 = centroid.clone();
+    const up = new THREE.Vector3().crossVectors(v1, v2).normalize();
+
+    return {
+      position,
+      up,
+      minZ: box.min.z,
+      maxZ: 10 * zValue,
+    };
+  };
+
+  calculateMeshCentroid = (mesh) => {
+    const box = new THREE.Box3().setFromObject(mesh);
+    const centroid = new THREE.Vector3().addVectors(box.min, box.max).divideScalar(2);
+    return centroid;
   };
 
   onLoadError = (...args) => {
@@ -138,11 +192,9 @@ class Viewer extends Component {
       .catch(this.onLoadError);
   };
 
-  componentDidMount() {
-    this.init();
-  }
-
   render() {
+    const {cameraPosition, minZ, maxZ} = this.state;
+
     return (
       <div>
         <MeshUpload onUpload={this.handleUpload}/>
@@ -154,7 +206,12 @@ class Viewer extends Component {
           }}
         >
         </div>
-        <CameraControls updateCameraPosition={this.handleCameraPositionChange}/>
+        <CameraControls
+          zValue={cameraPosition.z}
+          minZ={minZ}
+          maxZ={maxZ}
+          onCameraZChange={this.handleCameraZChange}
+        />
       </div>
     );
   }

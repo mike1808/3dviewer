@@ -35,6 +35,7 @@ const findFiles = (entries) => {
       case 'png':
       case 'jpg':
       case 'bmp':
+      case 'tif':
         files.textures.push(entry);
         break;
     }
@@ -43,6 +44,9 @@ const findFiles = (entries) => {
   return files;
 };
 
+function getArcLength(fraction, props) {
+  return fraction * Math.PI * (props.size - props.thickness);
+}
 
 class MeshUpload extends Component {
   state = {
@@ -54,7 +58,7 @@ class MeshUpload extends Component {
 
   handleError = (error) => {
     this.setState(error);
-  }
+  };
 
   unzipBlob = (zipFile) => {
     const zip = window.zip;
@@ -82,27 +86,29 @@ class MeshUpload extends Component {
 
         this.setState({filesCount});
 
-        const onProgress = (target) => {
-          const stateKey = `progress.${target}`;
+        let totalProgress = 0;
 
+        const onProgress = (index) => {
           return (current, total) => {
-            const value = current / total;
             // React goes crazy when I want to show progress
-            // this.setState({[stateKey]: value});
+            // this.setState({progress});
+            const value = current / total;
+            totalProgress += value / filesCount;
+            this.updateProgress(index, value, totalProgress);
           }
         };
 
         const loadTextures = () => {
-          return textures.map(texture =>
+          return textures.map((texture, i) =>
             // let's assume it is a png
-            promisifyProgress(texture.getData.bind(texture))(new zip.BlobWriter('image/png'), onProgress('texture'))
+            promisifyProgress(texture.getData.bind(texture))(new zip.BlobWriter('image/png'), onProgress(2 + i))
               .then(data => ({name: texture.filename, data})),
           );
         };
 
         return Promise.all([
-          promisifyProgress(object.getData.bind(object))(new zip.BlobWriter('text/plain'), onProgress('object')),
-          material ? promisifyProgress(material.getData.bind(material))(new zip.BlobWriter('text/plain'), onProgress('material')) : null,
+          promisifyProgress(object.getData.bind(object))(new zip.BlobWriter('text/plain'), onProgress(0)),
+          material ? promisifyProgress(material.getData.bind(material))(new zip.BlobWriter('text/plain'), onProgress(1)) : null,
           ...loadTextures(),
         ]);
       })
@@ -155,9 +161,21 @@ class MeshUpload extends Component {
     });
   };
 
+  // Because we need to call this function a lot, we are going to change the progress
+  // directly rather than calling setState
+  updateProgress = (index, value, total) => {
+    const el = this.progressRefs[index];
+    const props = el.props;
+    el.refs.path.style.strokeDasharray = `${getArcLength(value, props)}, ${getArcLength(1, props)}`;
+
+    const totalEl = this.totalProgressRef;
+    totalEl.refs.bar1.parentElement.style.width = `${total * 100}%`;
+  };
 
   render() {
     const {files, types, filesCount, error} = this.state;
+
+    this.progressRefs = Array.from({length: filesCount});
 
     return (
       <div className="MeshUpload">
@@ -174,10 +192,13 @@ class MeshUpload extends Component {
         </p>}
         {files && <FilesList
           files={files}
-          // progress={[this.state['progress.object'], this.state['progress.material'], this.state['progress.texture']]}
-          progress={[]}
-          filesCount={filesCount}
           types={types}
+          progressRef={(progress, index) => {
+            this.progressRefs[index] = progress;
+          }}
+          totalProgressRef={progress => {
+            this.totalProgressRef = progress;
+          }}
         />}
       </div>
     );
