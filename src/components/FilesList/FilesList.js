@@ -25,7 +25,7 @@ class FileItem extends Component {
 FileItem.propTypes = {
   fileName: PropTypes.string.isRequired,
   type: PropTypes.string.isRequired,
-  progress: PropTypes.number.isRequired,
+  progressRef: PropTypes.func.isRequired,
 };
 
 class FilesList extends Component {

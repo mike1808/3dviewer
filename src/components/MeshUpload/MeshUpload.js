@@ -54,6 +54,7 @@ class MeshUpload extends Component {
     types: null,
     filesCount: 0,
     error: '',
+    loading: false,
   };
 
   handleError = (error) => {
@@ -136,6 +137,8 @@ class MeshUpload extends Component {
 
     const ext = file.name.slice(-3).toLowerCase();
 
+    let promise;
+
     if (ext === 'zip') {
       return this.unzipBlob(file)
         .then(({object, material, textures}) => {
@@ -172,16 +175,49 @@ class MeshUpload extends Component {
     totalEl.refs.bar1.parentElement.style.width = `${total * 100}%`;
   };
 
+  loadExample = () => {
+    this.setState({loading: true});
+    return fetch('viktor.zip')
+      .then(res => res.arrayBuffer())
+      .then((buffer) => {
+        const blob = new Blob([buffer], {type: 'application/octet-stream'});
+        return this.unzipBlob(blob);
+      })
+      .then(({object, material, textures}) => {
+        const uris = {
+          objectUri: this.createObjectURI(object),
+          materialUri: this.createObjectURI(material),
+          textures: textures.map(texture => ({uri: this.createObjectURI(texture.data), name: texture.name})),
+        };
+
+        this.props.onUpload(uris);
+      })
+      .then(() => {
+        this.setState({loading: false});
+      })
+      .catch(() => {
+        this.setState({loading: false});
+      })
+  };
+
   render() {
-    const {files, types, filesCount, error} = this.state;
+    const {files, types, filesCount, error, loading} = this.state;
 
     this.progressRefs = Array.from({length: filesCount});
 
     return (
       <div className="MeshUpload">
         <RaisedButton
-          containerElement='label'
-          label='Upload Mesh'>
+          label={loading ? 'Summoning...' : 'Summon Viktor'}
+          onClick={this.loadExample}
+          disabled={loading}
+        />
+        <span style={{margin: '0 5px'}}>or</span>
+        <RaisedButton
+          containerElement="label"
+          primary
+          label="Load Mesh"
+        >
           <input type="file" style={{display: 'none'}} onChange={this.handleChange}/>
         </RaisedButton>
         {!files && <p>
