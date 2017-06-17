@@ -14,11 +14,6 @@ import styles from './Viewer.css';
 const WIDTH = 1024;
 const HEIGHT = 768;
 
-const MESH_NAME = 'areg.obj';
-const MATERIAL_NAME = 'areg.obj.mtl';
-const TEXTURE_NAME = 'texture.png';
-const MESH_ROOT = 'mesh/';
-
 const promisifyLoad = (loader) => {
   function onProgress(xhr) {
     console.log((xhr.loaded / xhr.total * 100) + '% loaded');
