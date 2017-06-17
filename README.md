@@ -2,6 +2,8 @@
 
 Simple React and Three.js based 3D Viewer:
 
+Demo: [http://3dviewer.mmanukyan.io/](http://3dviewer.mmanukyan.io/)
+
 ## TODO and Bugs:
 
 - ~~Some OBJ files with texture cannot be opened~~ (they were out of view frustum)
