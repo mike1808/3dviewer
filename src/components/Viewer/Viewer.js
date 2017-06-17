@@ -161,7 +161,7 @@ class Viewer extends Component {
 
     const position = new THREE.Vector3().copy(centroid);
 
-    const zValue = height + height / (2 * Math.tan(this.camera.fov * (Math.PI / 360)))
+    const zValue = height / 2 + height / (2 * Math.tan(this.camera.fov * (Math.PI / 360)))
     position.z = zValue;
 
     const v1 = centroid.clone().sub(position).normalize();
