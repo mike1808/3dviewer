@@ -37,7 +37,7 @@ class Viewer extends Component {
     this.ambientLight = new THREE.AmbientLight(0x404040);
     this.scene.add(this.ambientLight);
 
-    this.pointLight = new THREE.PointLight(0xffffff, 1); // this should dependant on the mesh size
+    this.pointLight = new THREE.PointLight(0xffffff, 1.); // this should dependant on the mesh size
     this.pointLight.position.set(0, 0, 0);
     this.scene.add(this.pointLight);
 
@@ -111,7 +111,7 @@ class Viewer extends Component {
     const box = new THREE.Box3().setFromObject(mesh);
     const height = box.getSize().y;
 
-    return height / 2 + height / (2 * Math.tan(this.camera.fov * (Math.PI / 360)))
+    return height + height / (2 * Math.tan(this.camera.fov * (Math.PI / 360)))
   };
 
   onLoadError = (...args) => {
