@@ -1,15 +1,12 @@
-import React, {Component} from 'react';
-import PropTypes from 'prop-types';
-import Divider from 'material-ui/Divider';
+import React, {Component} from "react";
+import Divider from "material-ui/Divider";
 
-import * as THREE from 'three';
-import MTLLoader from '../../loaders/MTLLoader';
-import OBJLoader from '../../loaders/OBJLoader';
+import * as THREE from "three";
+import MTLLoader from "../../loaders/MTLLoader";
+import OBJLoader from "../../loaders/OBJLoader";
 
-import MeshUpload from '../MeshUpload/MeshUpload';
-import CameraControls from '../CameraControls/CameraControls';
-
-import styles from './Viewer.css';
+import MeshUpload from "../MeshUpload/MeshUpload";
+import CameraControls from "../CameraControls/CameraControls";
 
 const WIDTH = 1024;
 const HEIGHT = 768;

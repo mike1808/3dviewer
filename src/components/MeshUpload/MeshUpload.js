@@ -49,7 +49,12 @@ class MeshUpload extends Component {
     files: null,
     types: null,
     filesCount: 0,
+    error: '',
   };
+
+  handleError = (error) => {
+    this.setState(error);
+  }
 
   unzipBlob = (zipFile) => {
     const zip = window.zip;
@@ -104,7 +109,8 @@ class MeshUpload extends Component {
       .then(([object, material, ...textures]) => {
         zipReader.close();
         return {object, material, textures};
-      });
+      })
+      .catch(this.handleError);
   };
 
   createObjectURI(blob) {
@@ -114,22 +120,40 @@ class MeshUpload extends Component {
 
   handleChange = (event) => {
     const file = event.target.files[0];
-    return this.unzipBlob(file)
-      .then(({object, material, textures}) => {
-        const uris = {
-          objectUri: this.createObjectURI(object),
-          materialUri: this.createObjectURI(material),
-          textures: textures.map(texture => ({uri: this.createObjectURI(texture.data), name: texture.name})),
-        };
+    const ext = file.name.slice(-3).toLowerCase();
 
-        this.props.onUpload(uris);
-      })
-      .catch(error => console.error(error));
+    this.setState({
+      error: ''
+    });
+
+    if (ext === 'zip') {
+      return this.unzipBlob(file)
+        .then(({object, material, textures}) => {
+          const uris = {
+            objectUri: this.createObjectURI(object),
+            materialUri: this.createObjectURI(material),
+            textures: textures.map(texture => ({uri: this.createObjectURI(texture.data), name: texture.name})),
+          };
+
+          this.props.onUpload(uris);
+        });
+    } else if (ext === 'obj') {
+      this.setState({
+        files: [file.name],
+        types: ['Object'],
+      });
+
+      return this.props.onUpload({objectUri: this.createObjectURI(file)});
+    }
+
+    this.setState({
+      error: 'You should provide either .OBJ file or .ZIP archive with .OBJ file in it'
+    });
   };
 
 
   render() {
-    const {files, types, filesCount} = this.state;
+    const {files, types, filesCount, error} = this.state;
 
     return (
       <div className="MeshUpload">
@@ -139,7 +163,10 @@ class MeshUpload extends Component {
           <input type="file" style={{display: 'none'}} onChange={this.handleChange}/>
         </RaisedButton>
         {!files && <p>
-          Provide ZIP archive with .OBJ file or/and its materials and textures
+          Provide .OBJ file or ZIP archive with .OBJ file or/and its materials and textures
+        </p>}
+        {error && <p style={{color: 'red'}}>
+          {error}
         </p>}
         {files && <FilesList
           files={files}
