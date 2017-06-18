@@ -134,7 +134,7 @@ class Viewer extends Component {
 
   };
 
-  load = ({objectUri, materialUri, textures}) => {
+  load = ({objectUri, materialUri, textures, cleanup}) => {
     let loadMaterialPromise = Promise.resolve(null);
     if (materialUri) {
       loadMaterialPromise = this.loadMaterial(materialUri, textures);
@@ -142,7 +142,8 @@ class Viewer extends Component {
 
     return loadMaterialPromise
       .then(materials => this.loadObject(objectUri, materials))
-      .then(this.addObject);
+      .then(this.addObject)
+      .then(cleanup);
   };
 
   handleCameraZChange = (z) => {

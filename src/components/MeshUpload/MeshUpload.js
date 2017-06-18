@@ -1,9 +1,9 @@
-import React, {Component} from 'react';
-import PropTypes from 'prop-types';
-import RaisedButton from 'material-ui/RaisedButton';
-import FilesList from '../FilesList/FilesList';
-
-import styles from './MeshUpload.css';
+import React, {Component} from "react";
+import PropTypes from "prop-types";
+import RaisedButton from "material-ui/RaisedButton";
+import FilesList from "../FilesList/FilesList";
+import mime from "mime-types";
+import path from "path";
 
 const promisify = func => (...args) => new Promise((resolve, reject) => func(...args, resolve, reject));
 const promisifyProgress = func => (arg, progress) => new Promise((resolve) => func(arg, resolve, progress));
@@ -17,7 +17,12 @@ const findFiles = (entries) => {
 
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
-    const fileName = entry.filename;
+
+    if (entry.directory) {
+      continue;
+    }
+
+    const fileName = path.basename(entry.filename);
     const isHidden = fileName[0] === '.' || fileName.slice(0, 2) === '__';
     if (isHidden) {
       continue;
@@ -36,8 +41,14 @@ const findFiles = (entries) => {
       case 'jpg':
       case 'bmp':
       case 'tif':
+      case 'tga':
         files.textures.push(entry);
         break;
+      default:
+        const type = mime.lookup(extension);
+        if (type && type.slice(0, 5) === 'image') {
+          files.textures.push(entry);
+        }
     }
   }
 
@@ -101,8 +112,7 @@ class MeshUpload extends Component {
 
         const loadTextures = () => {
           return textures.map((texture, i) =>
-            // let's assume it is a png
-            promisifyProgress(texture.getData.bind(texture))(new zip.BlobWriter('image/png'), onProgress(2 + i))
+            promisifyProgress(texture.getData.bind(texture))(new zip.BlobWriter(mime.contentType(texture.filename.slice(-3))), onProgress(2 + i))
               .then(data => ({name: texture.filename, data})),
           );
         };
@@ -123,6 +133,12 @@ class MeshUpload extends Component {
   createObjectURI(blob) {
     if (!blob) return null;
     return URL.createObjectURL(blob);
+  };
+
+  deleteObjectURI(uri) {
+    if (!uri) return;
+
+    URL.revokeObjectURL(uri);
   };
 
   handleChange = (event) => {
@@ -147,6 +163,13 @@ class MeshUpload extends Component {
             materialUri: this.createObjectURI(material),
             textures: textures.map(texture => ({uri: this.createObjectURI(texture.data), name: texture.name})),
           };
+
+          uris.cleanup = () => {
+            this.deleteObjectURI(uris.objectUri);
+            this.deleteObjectURI(uris.materialUri);
+            uris.texture.forEach(uri => this.deleteObjectURI(uri));
+          };
+
 
           this.props.onUpload(uris);
         });

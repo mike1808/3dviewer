@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "material-ui": "^0.18.3",
+    "mime-types": "^2.1.15",
     "react": "^15.6.1",
     "react-dom": "^15.6.1",
     "react-tap-event-plugin": "^2.0.1",

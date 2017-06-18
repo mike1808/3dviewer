@@ -35,7 +35,7 @@ class FilesList extends Component {
     return (
       <div className="FilesList">
         <LinearProgress mode="determinate" value={0} style={{width: '50%'}} ref={totalProgressRef}/>
-        <List style={{display: 'flex'}}>
+        <List>
           {files.map((file, i) => (
             <FileItem key={file} fileName={file} type={types[i]} progressRef={(progressEl) => {
               progressRef(progressEl, i);
